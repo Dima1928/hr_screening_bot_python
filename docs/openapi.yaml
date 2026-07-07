@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: HR Screening Bot
+  version: 1.0.0
+  description: Микросервис HR-бота для первичного скрининга кандидатов.
+paths:
+  /health:
+    get:
+      summary: Проверка работоспособности сервиса
+      responses:
+        '200':
+          description: Сервис доступен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /webhook:
+    post:
+      summary: Webhook для входящих сообщений кандидата
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - candidate_id
+                - vacancy_id
+                - text
+              properties:
+                candidate_id:
+                  type: string
+                  example: cand-123
+                candidate_name:
+                  type: string
+                  example: Иван Петров
+                vacancy_id:
+                  type: string
+                  example: python_backend
+                text:
+                  type: string
+                  example: Здравствуйте, хочу откликнуться на вакансию
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Ответ HR-бота
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  candidate_id:
+                    type: string
+                  vacancy_id:
+                    type: string
+                  stage:
+                    type: string
+                    enum: [in_progress, qualified, rejected, needs_clarification, interview_planned]
+                  reply:
+                    type: string
+                  recommendation:
+                    type: object
+                    nullable: true
+                  interview_slots:
+                    type: array
+                    items:
+                      type: object
+        '404':
+          description: Вакансия не найдена

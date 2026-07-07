@@ -1,0 +1,47 @@
+[
+  {
+    "id": "python_backend",
+    "title": "Python Backend Developer",
+    "description": "Разработка backend-сервисов, интеграций и API для внутренних продуктов компании.",
+    "must_have": [
+      "Python",
+      "FastAPI или Django",
+      "REST API",
+      "SQL",
+      "Docker",
+      "Git"
+    ],
+    "nice_to_have": [
+      "Redis",
+      "RabbitMQ",
+      "pytest",
+      "микросервисная архитектура"
+    ],
+    "min_experience_years": 2,
+    "salary_from": 120000,
+    "salary_to": 220000,
+    "currency": "RUB",
+    "recruiter_email": "hr-python@example.com"
+  },
+  {
+    "id": "hr_generalist",
+    "title": "HR Generalist",
+    "description": "Ведение подбора, адаптации сотрудников, HR-документооборота и коммуникации с руководителями.",
+    "must_have": [
+      "подбор персонала",
+      "проведение интервью",
+      "адаптация сотрудников",
+      "HR-документооборот"
+    ],
+    "nice_to_have": [
+      "аналитика HR-метрик",
+      "массовый подбор",
+      "работа с ATS"
+    ],
+    "min_experience_years": 1,
+    "salary_from": 70000,
+    "salary_to": 130000,
+    "currency": "RUB",
+    "recruiter_email": "hr-general@example.com"
+  }
+]

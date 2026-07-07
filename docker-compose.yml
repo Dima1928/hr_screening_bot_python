@@ -1,0 +1,22 @@
+services:
+  hr-screening-bot:
+    build: .
+    container_name: hr-screening-bot-python
+    env_file:
+      - .env
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+
+  # Имитация внутренней сети Docker, через которую внешний сервис может слать webhook.
+  # Реального доступа к СпросиИИ нет, поэтому входящие сообщения принимаются на /webhook.
+  webhook-client-simulator:
+    image: curlimages/curl:8.8.0
+    depends_on:
+      - hr-screening-bot
+    profiles:
+      - demo
+    command: >
+      sh -c "sleep 2 && curl -s -X POST http://hr-screening-bot:8090/webhook
+      -H 'Content-Type: application/json'
+      -d '{\"candidate_id\":\"demo-1\",\"candidate_name\":\"Иван\",\"vacancy_id\":\"python_backend\",\"text\":\"Здравствуйте, хочу откликнуться на Python backend разработчика\"}'"
