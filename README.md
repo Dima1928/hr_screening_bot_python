@@ -45,6 +45,8 @@ Authorization: Bearer {LLM_API_KEY}
 - FastAPI;
 - Pydantic;
 - httpx;
+- PostgreSQL;
+- psycopg;
 - pytest;
 - Docker / Docker Compose.
 
@@ -58,7 +60,7 @@ hr_screening_bot_python/
 │   │   ├── config.py
 │   │   └── logging.py
 │   ├── data/
-│   │   └── vacancies.json
+│   │   └── default_vacancies.py
 │   ├── llm/
 │   │   ├── base.py
 │   │   ├── deepseek.py
@@ -88,6 +90,14 @@ hr_screening_bot_python/
 
 ## Быстрый запуск локально
 
+Перед запуском приложения нужен PostgreSQL. Проще всего поднять только базу через Docker:
+
+```bash
+docker compose up -d postgres
+```
+
+После этого можно запускать приложение из VS Code.
+
 ```bash
 python -m venv .venv
 ```
@@ -115,6 +125,16 @@ pip install -r requirements-dev.txt
 ```bash
 cp .env.example .env
 ```
+
+Для локального запуска из VS Code в `.env` должен быть адрес PostgreSQL через `localhost`:
+
+```env
+VACANCY_STORAGE=postgres
+DATABASE_URL=postgresql://hr_bot:hr_bot_password@localhost:5432/hr_screening
+SEED_VACANCIES_ON_STARTUP=true
+```
+
+При первом обращении сервис сам создаст таблицу `vacancies` и заполнит её стартовыми вакансиями.
 
 Запуск:
 
@@ -177,6 +197,8 @@ LLM_MODE=deepseek
 LLM_API_BASE_URL=https://api.deepseek.com
 LLM_API_KEY=ваш_api_ключ
 LLM_MODEL=deepseek-chat
+LLM_TIMEOUT_SECONDS=30
+SYSTEM_PROMPT_PATH=prompts/system_prompt.md
 ```
 
 Клиент находится в файле:
@@ -186,6 +208,31 @@ app/llm/deepseek.py
 ```
 
 Он отправляет POST-запрос на `/chat/completions` и просит модель возвращать строгий JSON, чтобы сервис мог надежно обработать результат.
+
+
+## Системный промпт
+
+Системный промпт вынесен в отдельный markdown-файл:
+
+```text
+prompts/system_prompt.md
+```
+
+Путь к файлу задаётся в `.env`:
+
+```env
+SYSTEM_PROMPT_PATH=prompts/system_prompt.md
+```
+
+Чтобы изменить поведение внешней языковой модели, достаточно отредактировать `prompts/system_prompt.md` и перезапустить сервер. Это удобно, потому что промпт можно менять без правки Python-кода.
+
+Важно: файл системного промпта используется в режиме внешнего LLM-запроса:
+
+```env
+LLM_MODE=deepseek
+```
+
+В режиме `LLM_MODE=stub` бот работает по локальной детерминированной логике и не обращается к системному промпту.
 
 ## Пример запроса в webhook
 
@@ -236,10 +283,12 @@ curl -X POST http://localhost:8090/webhook \
 
 ## Вакансии
 
-Вакансии лежат в файле:
+Вакансии теперь хранятся в PostgreSQL в таблице `vacancies`. JSON-файл с вакансиями больше не используется.
+
+При запуске микросервис создаёт таблицу, если её ещё нет, и добавляет стартовые вакансии из файла:
 
 ```text
-app/data/vacancies.json
+app/data/default_vacancies.py
 ```
 
 Сейчас добавлены примеры:
@@ -247,7 +296,25 @@ app/data/vacancies.json
 - `python_backend`;
 - `hr_generalist`.
 
-Можно добавить свои вакансии, не меняя код.
+Добавить или изменить вакансии можно через SQL в PostgreSQL, не меняя бизнес-логику бота.
+
+## PostgreSQL
+
+Для хранения вакансий используется PostgreSQL. Основные переменные окружения:
+
+```env
+VACANCY_STORAGE=postgres
+DATABASE_URL=postgresql://hr_bot:hr_bot_password@localhost:5432/hr_screening
+SEED_VACANCIES_ON_STARTUP=true
+```
+
+В Docker Compose приложение получает внутренний адрес базы автоматически:
+
+```env
+DATABASE_URL=postgresql://hr_bot:hr_bot_password@postgres:5432/hr_screening
+```
+
+Таблица `vacancies` создаётся самим микросервисом при старте репозитория. В ней хранятся название вакансии, описание, must-have и nice-to-have навыки, минимальный опыт, зарплатная вилка, валюта и email рекрутера.
 
 ## Тесты
 
@@ -265,7 +332,7 @@ make test
 
 Что проверяется:
 
-- загрузка вакансий;
+- получение вакансий из репозитория;
 - хранение истории диалога;
 - webhook endpoint;
 - бизнес-логика скрининга;
@@ -319,13 +386,13 @@ git tag v1.0.0
 | Webhooks | `POST /webhook` |
 | Нет доступа к СпросиИИ | Endpoint совместим с внешним webhook-источником, можно подключить позже |
 | Обращение к LLM | DeepSeek через POST `/chat/completions` |
-| Внутренняя сеть Docker / порты | `docker-compose.yml`, порт `8090`, обращение по имени сервиса внутри сети |
+| Внутренняя сеть Docker / порты | `docker-compose.yml`, порт `8090`, PostgreSQL доступен приложению по имени сервиса `postgres` |
 | TDD | тесты в папке `tests/`, запуск `pytest -q` |
-| Docker | `Dockerfile` и `docker-compose.yml` |
+| Docker | `Dockerfile`, `docker-compose.yml`, отдельный контейнер PostgreSQL |
 | Git Flow | описан в README |
 | Предквалификационные вопросы | `LLMClient.next_question()` |
 | Оценка опыта, навыков, ожиданий | `LLMClient.analyze_candidate()` |
-| Проверка требований | требования вакансии в `vacancies.json` |
+| Проверка требований | требования вакансии хранятся в PostgreSQL, стартовые данные сидятся из `app/data/default_vacancies.py` |
 | Резюме беседы и рекомендация | модель `ScreeningAnalysis` |
 | Планирование интервью | `CalendarSimulator` |
 | Вежливый отказ | формируется при статусе `не подходит` |

@@ -15,8 +15,14 @@ class Settings(BaseSettings):
     llm_api_key: str = Field(default="", alias="LLM_API_KEY")
     llm_model: str = Field(default="deepseek-chat", alias="LLM_MODEL")
     llm_timeout_seconds: float = Field(default=30, alias="LLM_TIMEOUT_SECONDS")
+    system_prompt_path: str = Field(default="prompts/system_prompt.md", alias="SYSTEM_PROMPT_PATH")
 
-    vacancies_path: str = Field(default="app/data/vacancies.json", alias="VACANCIES_PATH")
+    vacancy_storage: Literal["postgres", "memory"] = Field(default="postgres", alias="VACANCY_STORAGE")
+    database_url: str = Field(
+        default="postgresql://hr_bot:hr_bot_password@localhost:5432/hr_screening",
+        alias="DATABASE_URL",
+    )
+    seed_vacancies_on_startup: bool = Field(default=True, alias="SEED_VACANCIES_ON_STARTUP")
     min_screening_questions: int = Field(default=4, alias="MIN_SCREENING_QUESTIONS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

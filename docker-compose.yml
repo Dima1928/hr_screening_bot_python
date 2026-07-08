@@ -1,15 +1,38 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hr-screening-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hr_screening}
+      POSTGRES_USER: ${POSTGRES_USER:-hr_bot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hr_bot_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hr_bot} -d ${POSTGRES_DB:-hr_screening}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   hr-screening-bot:
     build: .
     container_name: hr-screening-bot-python
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hr_bot}:${POSTGRES_PASSWORD:-hr_bot_password}@postgres:5432/${POSTGRES_DB:-hr_screening}
+      VACANCY_STORAGE: postgres
     ports:
       - "8090:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   # Имитация внутренней сети Docker, через которую внешний сервис может слать webhook.
-  # Реального доступа к СпросиИИ нет, поэтому входящие сообщения принимаются на /webhook.
   webhook-client-simulator:
     image: curlimages/curl:8.8.0
     depends_on:
@@ -20,3 +43,6 @@ services:
       sh -c "sleep 2 && curl -s -X POST http://hr-screening-bot:8090/webhook
       -H 'Content-Type: application/json'
       -d '{\"candidate_id\":\"demo-1\",\"candidate_name\":\"Иван\",\"vacancy_id\":\"python_backend\",\"text\":\"Здравствуйте, хочу откликнуться на Python backend разработчика\"}'"
+
+volumes:
+  postgres_data:

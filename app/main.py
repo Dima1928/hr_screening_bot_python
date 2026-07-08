@@ -4,12 +4,18 @@ from fastapi import Depends, FastAPI, HTTPException
 
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
+from app.core.prompt_loader import load_system_prompt
 from app.llm.base import LLMClient
 from app.llm.deepseek import DeepSeekClient
 from app.llm.stub import StubLLMClient
 from app.models.screening import WebhookRequest, WebhookResponse
 from app.repositories.history import InMemoryHistoryRepository
-from app.repositories.vacancy import JsonVacancyRepository, VacancyNotFoundError
+from app.repositories.vacancy import (
+    InMemoryVacancyRepository,
+    PostgresVacancyRepository,
+    VacancyNotFoundError,
+    VacancyRepository,
+)
 from app.scheduler.calendar import CalendarSimulator
 from app.services.processor import ScreeningProcessor
 
@@ -29,8 +35,14 @@ def get_history_repository() -> InMemoryHistoryRepository:
 
 
 @lru_cache
-def get_vacancy_repository() -> JsonVacancyRepository:
-    return JsonVacancyRepository(get_settings().vacancies_path)
+def get_vacancy_repository() -> VacancyRepository:
+    current_settings = get_settings()
+    if current_settings.vacancy_storage == "memory":
+        return InMemoryVacancyRepository()
+    return PostgresVacancyRepository(
+        database_url=current_settings.database_url,
+        seed_on_startup=current_settings.seed_vacancies_on_startup,
+    )
 
 
 @lru_cache
@@ -47,12 +59,13 @@ def get_llm_client() -> LLMClient:
             base_url=current_settings.llm_api_base_url,
             model=current_settings.llm_model,
             timeout_seconds=current_settings.llm_timeout_seconds,
+            system_prompt=load_system_prompt(current_settings.system_prompt_path),
         )
     return StubLLMClient()
 
 
 def get_processor(
-    vacancy_repository: JsonVacancyRepository = Depends(get_vacancy_repository),
+    vacancy_repository: VacancyRepository = Depends(get_vacancy_repository),
     history_repository: InMemoryHistoryRepository = Depends(get_history_repository),
     llm_client: LLMClient = Depends(get_llm_client),
     calendar: CalendarSimulator = Depends(get_calendar),

@@ -12,21 +12,18 @@ def send_message(candidate_id: str, candidate_name: str, vacancy_id: str, text: 
         "vacancy_id": vacancy_id,
         "text": text,
     }
-
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-
     request = urllib.request.Request(
         URL,
         data=data,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-
     with urllib.request.urlopen(request) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def main():
+def main() -> None:
     candidate_id = input("ID кандидата, например test-1: ").strip() or "test-1"
     candidate_name = input("Имя кандидата: ").strip() or "Иван"
     vacancy_id = input("ID вакансии, например python_backend: ").strip() or "python_backend"
@@ -35,7 +32,6 @@ def main():
 
     while True:
         text = input("Кандидат: ").strip()
-
         if text.lower() in {"exit", "quit", "выход"}:
             break
 
@@ -47,7 +43,6 @@ def main():
 
         print("\nБот:")
         print(result.get("reply"))
-
         print("\nТекущий этап:")
         print(result.get("stage"))
 
@@ -61,7 +56,6 @@ def main():
             print("\nДоступные слоты:")
             for slot in slots:
                 print(f"- {slot['slot_id']}: {slot['starts_at']} — {slot['ends_at']}")
-
         print()
 
 

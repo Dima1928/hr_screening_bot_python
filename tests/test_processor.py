@@ -3,7 +3,7 @@ import pytest
 from app.llm.stub import StubLLMClient
 from app.models.screening import BotStage, WebhookRequest
 from app.repositories.history import InMemoryHistoryRepository
-from app.repositories.vacancy import JsonVacancyRepository
+from app.repositories.vacancy import InMemoryVacancyRepository
 from app.scheduler.calendar import CalendarSimulator
 from app.services.processor import ScreeningProcessor
 
@@ -11,7 +11,7 @@ from app.services.processor import ScreeningProcessor
 @pytest.mark.asyncio
 async def test_processor_asks_first_question() -> None:
     processor = ScreeningProcessor(
-        vacancy_repository=JsonVacancyRepository("app/data/vacancies.json"),
+        vacancy_repository=InMemoryVacancyRepository(),
         history_repository=InMemoryHistoryRepository(),
         llm_client=StubLLMClient(),
         calendar=CalendarSimulator(),
@@ -34,7 +34,7 @@ async def test_processor_asks_first_question() -> None:
 @pytest.mark.asyncio
 async def test_processor_returns_slots_for_suitable_candidate_after_screening() -> None:
     processor = ScreeningProcessor(
-        vacancy_repository=JsonVacancyRepository("app/data/vacancies.json"),
+        vacancy_repository=InMemoryVacancyRepository(),
         history_repository=InMemoryHistoryRepository(),
         llm_client=StubLLMClient(),
         calendar=CalendarSimulator(),
@@ -63,7 +63,7 @@ async def test_processor_returns_slots_for_suitable_candidate_after_screening() 
 @pytest.mark.asyncio
 async def test_processor_rejects_weak_candidate() -> None:
     processor = ScreeningProcessor(
-        vacancy_repository=JsonVacancyRepository("app/data/vacancies.json"),
+        vacancy_repository=InMemoryVacancyRepository(),
         history_repository=InMemoryHistoryRepository(),
         llm_client=StubLLMClient(),
         calendar=CalendarSimulator(),

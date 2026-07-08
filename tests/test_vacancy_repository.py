@@ -1,12 +1,10 @@
-from pathlib import Path
-
 import pytest
 
-from app.repositories.vacancy import JsonVacancyRepository, VacancyNotFoundError
+from app.repositories.vacancy import InMemoryVacancyRepository, VacancyNotFoundError
 
 
 def test_get_vacancy_by_id() -> None:
-    repo = JsonVacancyRepository(Path("app/data/vacancies.json"))
+    repo = InMemoryVacancyRepository()
 
     vacancy = repo.get("python_backend")
 
@@ -15,7 +13,7 @@ def test_get_vacancy_by_id() -> None:
 
 
 def test_unknown_vacancy_raises_error() -> None:
-    repo = JsonVacancyRepository(Path("app/data/vacancies.json"))
+    repo = InMemoryVacancyRepository()
 
     with pytest.raises(VacancyNotFoundError):
         repo.get("unknown")

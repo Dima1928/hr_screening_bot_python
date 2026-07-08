@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
-from app.main import app, get_history_repository
+from app.main import app, get_history_repository, get_vacancy_repository
 from app.repositories.history import InMemoryHistoryRepository
+from app.repositories.vacancy import InMemoryVacancyRepository
 
 
 def test_health_endpoint() -> None:
@@ -15,6 +16,7 @@ def test_health_endpoint() -> None:
 
 def test_webhook_endpoint_returns_question() -> None:
     app.dependency_overrides[get_history_repository] = lambda: InMemoryHistoryRepository()
+    app.dependency_overrides[get_vacancy_repository] = lambda: InMemoryVacancyRepository()
     client = TestClient(app)
 
     response = client.post(

@@ -6,7 +6,7 @@ import pytest
 from app.llm.deepseek import DeepSeekClient
 from app.models.message import ConversationMessage, MessageRole
 from app.models.screening import RecommendationStatus
-from app.repositories.vacancy import JsonVacancyRepository
+from app.repositories.vacancy import InMemoryVacancyRepository
 
 
 @pytest.mark.asyncio
@@ -32,9 +32,10 @@ async def test_deepseek_next_question_uses_post_chat_completions() -> None:
         client = DeepSeekClient(
             api_key="test-key",
             base_url="https://api.deepseek.com",
+            system_prompt="CUSTOM HR SYSTEM PROMPT",
             http_client=http_client,
         )
-        vacancy = JsonVacancyRepository("app/data/vacancies.json").get("python_backend")
+        vacancy = InMemoryVacancyRepository().get("python_backend")
 
         question = await client.next_question(vacancy, [], "Иван")
 
@@ -44,6 +45,7 @@ async def test_deepseek_next_question_uses_post_chat_completions() -> None:
     assert captured["authorization"] == "Bearer test-key"
     assert captured["payload"]["model"] == "deepseek-chat"
     assert captured["payload"]["response_format"] == {"type": "json_object"}
+    assert "CUSTOM HR SYSTEM PROMPT" in captured["payload"]["messages"][0]["content"]
 
 
 @pytest.mark.asyncio
@@ -77,7 +79,7 @@ async def test_deepseek_analyze_candidate_parses_screening_json() -> None:
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as http_client:
         client = DeepSeekClient(api_key="test-key", http_client=http_client)
-        vacancy = JsonVacancyRepository("app/data/vacancies.json").get("python_backend")
+        vacancy = InMemoryVacancyRepository().get("python_backend")
         history = [ConversationMessage(role=MessageRole.CANDIDATE, text="Python, Docker, 3 года")]
 
         analysis = await client.analyze_candidate(vacancy, history)

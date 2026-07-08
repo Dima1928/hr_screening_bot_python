@@ -4,14 +4,14 @@ from app.llm.base import LLMClient
 from app.models.message import ConversationMessage, MessageRole
 from app.models.screening import BotStage, RecommendationStatus, WebhookRequest, WebhookResponse
 from app.repositories.history import InMemoryHistoryRepository
-from app.repositories.vacancy import JsonVacancyRepository
+from app.repositories.vacancy import VacancyRepository
 from app.scheduler.calendar import CalendarSimulator
 
 
 class ScreeningProcessor:
     def __init__(
         self,
-        vacancy_repository: JsonVacancyRepository,
+        vacancy_repository: VacancyRepository,
         history_repository: InMemoryHistoryRepository,
         llm_client: LLMClient,
         calendar: CalendarSimulator,

@@ -9,6 +9,10 @@ from app.models.message import ConversationMessage, MessageRole
 from app.models.screening import RecommendationStatus, ScreeningAnalysis
 from app.models.vacancy import Vacancy
 
+DEFAULT_SYSTEM_PROMPT = """Ты HR-бот для первичного скрининга кандидатов.
+Общайся на русском языке, учитывай требования вакансии и историю диалога.
+Когда от тебя требуется JSON, возвращай строго валидный JSON без markdown и лишнего текста."""
+
 
 class DeepSeekClient(LLMClient):
     """LLM-клиент, который обращается к DeepSeek через POST /chat/completions."""
@@ -19,6 +23,7 @@ class DeepSeekClient(LLMClient):
         base_url: str = "https://api.deepseek.com",
         model: str = "deepseek-chat",
         timeout_seconds: float = 30,
+        system_prompt: str | None = None,
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
         if not api_key:
@@ -27,6 +32,7 @@ class DeepSeekClient(LLMClient):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.system_prompt = (system_prompt or DEFAULT_SYSTEM_PROMPT).strip()
         self._http_client = http_client
 
     async def next_question(
@@ -39,8 +45,7 @@ class DeepSeekClient(LLMClient):
             [
                 {
                     "role": "system",
-                    "content": (
-                        "Ты HR-бот для первичного скрининга кандидатов. "
+                    "content": self._build_system_prompt(
                         "Задай ровно один следующий вопрос кандидату. "
                         "Вопрос должен быть адаптивным: не повторяй уже заданное, "
                         "учитывай ответы кандидата и требования вакансии. "
@@ -74,8 +79,7 @@ class DeepSeekClient(LLMClient):
             [
                 {
                     "role": "system",
-                    "content": (
-                        "Ты HR-бот для первичного скрининга кандидатов. "
+                    "content": self._build_system_prompt(
                         "Оцени кандидата по требованиям вакансии, опыту, навыкам и ожиданиям. "
                         "Верни строго JSON без markdown. Поля: "
                         "status: одно из ['подходит','не подходит','требуется уточнение']; "
@@ -98,6 +102,9 @@ class DeepSeekClient(LLMClient):
             ]
         )
         return self._analysis_from_payload(payload)
+
+    def _build_system_prompt(self, task_instruction: str) -> str:
+        return f"{self.system_prompt}\n\n{task_instruction.strip()}"
 
     async def _send_messages(self, messages: list[dict[str, str]]) -> dict[str, Any]:
         request_payload = {
